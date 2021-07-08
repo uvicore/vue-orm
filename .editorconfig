@@ -1,0 +1,41 @@
+# EditorConfig is awesome: http://EditorConfig.org
+
+# Top-most EditorConfig file
+root = true
+
+# Global settings
+# By default everything should be 4 spaces
+[*]
+charset = utf-8
+indent_size = 4
+end_of_line = lf
+indent_style = space
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Ruby
+[*.{rb,ru}]
+indent_size = 2
+indent_style = space
+
+# Yaml and Json
+[*.{yaml,yml,json}]
+indent_size = 2
+indent_style = space
+
+# Html, Css, Js, Ts
+[*.{js,jsx,ts,tsx,css,scss,saas,html,htm}]
+indent_size = 2
+indent_style = space
+
+# INI and cfg, ensure 4 TABS
+[*.{conf,cfg,ini}]
+indent_size = 4
+indent_style = tab
+
+# Markdown specific
+[*.{md,markdown}]
+indent_size = 4
+indent_style = space
+max_line_length = off
+trim_trailing_whitespace = false

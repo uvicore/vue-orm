@@ -1,0 +1,26 @@
+{
+  "name": "@uvicore/vue-orm",
+  "version": "0.0.1",
+  "description": "Vue Uvicore API Frontent ORM",
+  "main": "./index.ts",
+  "scripts": {
+    "dev": "vite",
+    "build": "./bin/build.sh",
+    "build-vite": "vue-tsc --noEmit && vite build",
+    "serve": "vite preview"
+  },
+  "dependencies": {
+    "vue": "^3.0.11",
+    "axios": "^0.21.1"
+  },
+  "devDependencies": {
+    "@types/node": "^15.12.2",
+    "@vitejs/plugin-vue": "^1.2.3",
+    "@vue/compiler-sfc": "^3.0.5",
+    "tslib": "^2.3.0",
+    "typescript": "^4.3.2",
+    "vite": "^2.3.7",
+    "vite-plugin-dts": "^0.5.1",
+    "vue-tsc": "^0.0.24"
+  }
+}
