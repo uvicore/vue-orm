@@ -10,8 +10,9 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "vue": "^3.0.11",
-    "axios": "^0.21.1"
+    "@uvicore/vue-config": "^0.0.1",
+    "axios": "^0.21.1",
+    "vue": "^3.0.11"
   },
   "devDependencies": {
     "@types/node": "^15.12.2",
