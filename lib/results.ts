@@ -14,6 +14,17 @@ export class Results<E> {
     return !this.loading;
   }
 
+  /**
+   * Convert reactive proxy to object
+   */
+  public toObject(): void {
+    if (this.results) {
+      return JSON.parse(JSON.stringify(this.results));
+    } else {
+      return JSON.parse(JSON.stringify(this.result));
+    }
+  }
+
   public reset(): void {
     // Clear result while keeping the same ref for reactive consistency
     this.loading = true
