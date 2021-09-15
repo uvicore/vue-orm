@@ -20,11 +20,11 @@ export const useOpenApiStore = defineStore({
   },
 
   actions: {
-    schema(connectionKey: string, model: string = ''): UnwrapRef<Results<Record<string, any>>> {
+    schema(connectionKey: string, modelname: string = ''): UnwrapRef<Results<Record<string, any>>> {
       // Instead of passing 2 params, you can also pass connection.model dotnotation format
       if (connectionKey.includes('.')) {
         // Model is in the connection.model dotnotation format
-        var [connectionKey, modelname] = model.split('.');
+        var [connectionKey, modelname] = connectionKey.split('.');
       }
 
       console.log(`----: Getting schema for ${connectionKey}`);
