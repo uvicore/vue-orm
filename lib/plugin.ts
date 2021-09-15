@@ -22,12 +22,12 @@ export function createOrm(config: Record<string, any>): Plugin {
 
       console.log('ORM Plugin', config);
 
-      const openapi = useOpenApiStore();
+      //const openapi = useOpenApiStore();
 
-      Object.entries(config).forEach(([key, value]) => {
-        // console.log(key, value);
-        openapi.load(key, value.url + '/openapi.json')
-      })
+      // Object.entries(config).forEach(([key, value]) => {
+      //   // console.log(key, value);
+      //   openapi.load(key, value.url + '/openapi.json')
+      // })
 
     }
   }

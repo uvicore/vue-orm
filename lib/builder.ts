@@ -1,14 +1,9 @@
 import axios, { AxiosInstance } from 'axios';
-import { ref, Ref, UnwrapRef, reactive } from 'vue';
+import { UnwrapRef, reactive } from 'vue';
 import { ModelConfig } from './model';
 import { Results } from './results';
-
 import { useConfigStore } from '@uvicore/vue-config';
 
-// I know we said we didn't want to put this here, but i needed it for a second.
-import { useUserStore } from '@uvicore/vue-auth'
-
-import { useOpenApiStore } from './store';
 
 /**
  * Uvicore ORM style API client query builder
@@ -45,47 +40,15 @@ export class QueryBuilder<E> {
     // Entity is our actual Model class that inherits base Model and calls this .query()
     this.entity = entity;
     this.entityConfig = entity._config;
-    
+
     // Get config from state (inject does not work here)
     this.config = useConfigStore().config;
 
     this.api = axios.create({
       // Base API url is from this models connection string name
       baseURL: this.config.app.apis[this.entityConfig.connection].url,
-      headers: {
-        Authorization: `Bearer ${useUserStore().token}`
-      }
     });
-
-    //this.getSchema()
   }
-
-  // public async getSchema() {
-  //   try {
-  //     const { name, connection } = this.entityConfig
-
-  //     const schema = await this.api.get('openapi.json')
-  //     // const url = this.config.app.apis[this.entityConfig.connection].url + '/openapi.json';
-  //     // console.log("URL", url)
-
-  //    // await useOpenApiStore().load(connection, url)
-
-  //     this.schema = await schema.data.components.schemas[name]
-      
-  //     //console.log('SCHEMA RESULT FOR ' + name, schemaResult)
-  //     // const { connection, path } = this.entityConfig
-  //     // await useOpenApiStore().load(connection, path)
-  //     // this.schema = useOpenApiStore().config
-      
-  //   } catch (err) {
-  //     console.error(err)
-  //     throw(err)
-  //   }
-  // }
-
-  // public schema(): UnwrapRef<Results<Record<string, unknown>>> {
-  //   return {}
-  // }
 
   /**
    * Return results into a store.  Requires store have a .set() action like so:
@@ -171,13 +134,11 @@ export class QueryBuilder<E> {
    * @returns Vue reactive reference of model Results class
    */
   public get(params?: string, single: boolean = false): UnwrapRef<Results<E>> {
-
+    // Could be passing in an existing ref for us to modify, it nof, use a new ref
     const results = this._ref || reactive<Results<E>>(new Results())
 
-    if (this._ref) {
-      results.reset()
-    }
-
+    // If passing a ref, ensure it is empty before query runs or .push to append
+    if (this._ref) results.reset();
 
     // Init blank results
     //results.value.results = []

@@ -1,10 +1,13 @@
 import { useOpenApiStore } from "./store"
+import { UnwrapRef } from 'vue';
+import { Results } from './results';
+
 
 /**
  * Model configuration interface
  */
  export interface ModelConfig {
-  name: string,  
+  name: string,
   connection: string,
   path: string,
 }
@@ -15,7 +18,11 @@ import { useOpenApiStore } from "./store"
  * @returns Model
  */
  export abstract class Model {
-  
+
+  public static get_schema(connectionKey: string, modelname: string): UnwrapRef<Results<Record<string, any>>> {
+    return useOpenApiStore().schema(connectionKey, modelname);
+  }
+
   public save() {
     console.log('MODEL save() here', this)
   }
