@@ -1,3 +1,5 @@
 export * from './builder'
 export * from './model'
 export * from './results'
+export * from './store'
+export * from './plugin'

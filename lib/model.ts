@@ -1,13 +1,13 @@
-import { Results } from './results';
-import { QueryBuilder } from './builder';
-import { reactive, UnwrapRef } from 'vue';
+import { useOpenApiStore } from "./store"
 
-
-// export interface ModelInterface<E> {
-//   query(): QueryBuilder<E>;
-// }
-
-
+/**
+ * Model configuration interface
+ */
+ export interface ModelConfig {
+  name: string,  
+  connection: string,
+  path: string,
+}
 
 
 /**
@@ -15,7 +15,7 @@ import { reactive, UnwrapRef } from 'vue';
  * @returns Model
  */
  export abstract class Model {
-
+  
   public save() {
     console.log('MODEL save() here', this)
   }
@@ -25,6 +25,8 @@ import { reactive, UnwrapRef } from 'vue';
   }
 
 }
+
+
 
 
 
@@ -96,10 +98,3 @@ import { reactive, UnwrapRef } from 'vue';
 
 
 
-/**
- * Model configuration interface
- */
-export interface ModelConfig {
-  connection: string,
-  path: string,
-}
