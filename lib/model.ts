@@ -20,7 +20,7 @@ export interface ModelConfig {
 export abstract class Model {
   _config!: ModelConfig
 
-  public static get_schema(connectionKey: string, modelname: string): UnwrapRef<Results<Record<string, any>>> {
+  public static get_schema(connectionKey: string, modelname: string): UnwrapRef<Results<any>> {
     return useOpenApiStore().schema(connectionKey, modelname);
   }
 

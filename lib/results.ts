@@ -1,9 +1,11 @@
+
+import { Model } from "./model"
 /**
  * ORM style API Client Results class.
  * Results from API are not returned directly but wrapped in this Result
  * class which provides additional metadata including loading, error and reset.
  */
-export class Results<E> {
+export class Results<E extends Model> {
   public loading: boolean = true
   public error: any = null
   public count: number = 0
