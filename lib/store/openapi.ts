@@ -58,8 +58,8 @@ export const useOpenApiStore = defineStore('openapi', {
 
       if (!this.schemas.has(connectionKey)) {
         this.load().then(() => {
-            const modelProps = Object.entries(this.schemas.get(connectionKey)[modelname].properties)
-            modelProps.forEach(([key, prop]) => results.results.push({ key, value: (prop as any).title }))
+            const modelProps: any[] = Object.entries(this.schemas.get(connectionKey)[modelname].properties)
+            modelProps.forEach(([name, prop]) => results.results.push({ name, ...prop }))
 
           }).catch(e => {
             results.error = e
