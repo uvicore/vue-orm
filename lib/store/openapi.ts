@@ -8,57 +8,75 @@ import { useConfigStore } from '@uvicore/vue-config';
 /**
  * Pinia OpenAPI.json Store
  */
-export const useOpenApiStore = defineStore({
-  // unique id of the store across your application
-  id: 'openapi',
-
+export const useOpenApiStore = defineStore('openapi', {
   state: () => ({
-    //config: {} as Record<string, any>,
-    spec: {} as any,
+    schemas: new Map<string, any>(),
   }),
-
-  getters: {},
+  getters: {
+    apis(state): Record<string, any> {
+      const config = useConfigStore().config
+      return config.app.apis
+    },
+  },
   actions: {
-    schema(connectionKey: string, modelname: string = ''): UnwrapRef<Results<Record<string, any>>> {
-      // Instead of passing 2 params, you can also pass connection.model dotnotation string format
-      if (connectionKey.includes('.')) {
-        // Model is in the connection.model dotnotation format
-        var [connectionKey, modelname] = connectionKey.split('.');
+    async load(): Promise<void> {
+      try {
+        for await (const key of Object.keys(this.apis)) {
+          const apiCall = await axios.get(this.apis[key].url + '/openapi.json')
+          const response = await apiCall.data
+          this.schemas.set(key, response.components.schemas)
+        }
+      } catch(err) {
+        console.error(err)
       }
+    },
+    schema(connectionKey: string, modelname: string = ''): UnwrapRef<Results<any>> {
+      const results = reactive<Results<any>>(new Results());
 
-      console.log(`----: Getting schema for ${connectionKey}`);
+      if (!this.schemas.has(connectionKey)) {
+
+        this.load().then(() => {
+            const cxn: Record<string, any> = this.schemas.get(connectionKey)
+            results.result = cxn[modelname]
+            results.count = 1
+            console.log("loading schemas", results)
+          }).catch(e => {
+            results.error = e
+          }).finally(() => results.loading = false)
 
 
-      const results = reactive<Results<Record<string, any>>>(new Results());
-
-      if (this.spec[connectionKey]) {
-
-        console.log(`----: Schema already downloaded`);
-        results.loading = false;
-        results.count = 1;
-        results.result = this.spec[connectionKey].schema[modelname]
       } else {
-        console.log(`----: Schema NOT loaded, downloading now`);
-        // Look up url from config based on connectionKey
-        const url = useConfigStore().config.app.apis[connectionKey].url + '/openapi.json';
+        results.result = this.schemas.get(connectionKey)[modelname]
+        results.loading = false
 
-        // Query openapi.json and save to store
-        axios.get(url)
-          .then((res) => {
-            this.spec[connectionKey] = {};
-            this.spec[connectionKey].schema = res.data.components.schemas;
-            results.loading = false;
-            results.count = 1;
-            results.result = this.spec[connectionKey].schema[modelname]
-          })
-          .catch(err => {
-            results.error = err;
-            console.error(err);
-          })
       }
-      return results;
-    }
 
+      return results
+    },
+    props(connectionKey: string, modelname: string = ''): UnwrapRef<Results<any>> {
+      const results = reactive<Results<any>>(new Results());
+
+      if (!this.schemas.has(connectionKey)) {
+        this.load().then(() => {
+            const modelProps = Object.entries(this.schemas.get(connectionKey)[modelname].properties)
+            modelProps.forEach(([key, prop]) => results.results.push({ key, value: (prop as any).title }))
+
+          }).catch(e => {
+            results.error = e
+
+          }).finally(() =>
+            results.loading = false
+        )
+
+      } else {
+        const modelProps = Object.entries(this.schemas.get(connectionKey)[modelname].properties)
+        modelProps.forEach(([key, prop]) => results.results.push({ key, value: (prop as any).title }))
+        results.loading = false
+
+      }
+
+      return results
+    }
   }
 })
 

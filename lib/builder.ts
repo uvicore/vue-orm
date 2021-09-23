@@ -1,9 +1,8 @@
 import axios, { AxiosInstance } from 'axios';
 import { UnwrapRef, reactive } from 'vue';
-import { ModelConfig } from './model';
+import { Model, ModelConfig } from './model';
 import { Results } from './results';
-import { useConfigStore } from '@uvicore/vue-config';
-
+import { useOpenApiStore } from './store';
 
 /**
  * Uvicore ORM style API client query builder
@@ -11,53 +10,46 @@ import { useConfigStore } from '@uvicore/vue-config';
  * Uvicore provides an "autoapi" with compled queryability.  This API client
  * helps you query Uvicore style APIs with chainable elegance and precision!
  */
-export class QueryBuilder<E> {
+export class QueryBuilder<E extends Model> {
   // Actual model class (not instance) that will be instantiated for each axios result
   private entity: E
 
   // Models config, holds API connection string, url path and more
-  private entityConfig: ModelConfig
-
-  // Apps full config object
-  private config: any
+  private config: ModelConfig
 
   // Axios instance based on models URL and path
   private api: AxiosInstance
 
   // Query builder properties
   private _extraPath: string = ''
-  private _state: any|null = null
-  private _includes: string[]|null = null
-  private _where: any|null = null
-  private _ref: UnwrapRef<Results<E>>|null = null
-  // private schema: Record<string, unknown> = {}
+  private _state: any | null = null
+  private _includes: string[] | null = null
+  private _where: any | null = null
+  private _ref: UnwrapRef<Results<E>> | null = null
 
   /**
    * Instantiate class
    * @param entity actual model class (non instance)
    */
-  public constructor(entity: E|any) {
+  public constructor(entity: E) {
     // Entity is our actual Model class that inherits base Model and calls this .query()
     this.entity = entity;
-    this.entityConfig = entity._config;
-
-    // Get config from state (inject does not work here)
-    this.config = useConfigStore().config;
+    this.config = entity._config;
 
     this.api = axios.create({
       // Base API url is from this models connection string name
-      baseURL: this.config.app.apis[this.entityConfig.connection].url,
+      baseURL: useOpenApiStore().apis[this.config.connection].url,
     });
   }
 
   /**
    * Return results into a store.  Requires store have a .set() action like so:
-     set(state: UnwrapRef<Results<Space>>) {
+    set(state: UnwrapRef<Results<Space>>) {
       this.loading = state.loading
       this.error = state.error
       this.result = state.result
       this.results = state.results
-     },
+    },
    * @param store
    * @returns QueryBuilder
    */
@@ -140,33 +132,27 @@ export class QueryBuilder<E> {
     // If passing a ref, ensure it is empty before query runs or .push to append
     if (this._ref) results.reset();
 
-    // Init blank results
-    //results.value.results = []
-    results.results = []
-
     // Build URL parameters from query builder
     const builderPath = this.buildUrlQuery(params);
-    //console.log(builderPath);
 
     // Query Uvicore API
-    this.api.get(builderPath).then((res) => {
-      setTimeout(() => { // Fake timer for loading screen prototyping
-        results.loading = false
-
+    this.api.get(builderPath).then(({ data }) => {
         // If custom params on .get() or comming from .find() we could be returning
         // a single non-array value.  Convert it to array for consistent handling.
-        if (!Array.isArray(res.data)) res.data = [res.data]
+        if (!Array.isArray(data)) {
+          data = Array.from(data)
+        }
 
-        //results.value.count = res.data.length
-        results.count = res.data.length
-        if (res.data.length > 0) {
+        //results.value.count = data.length
+        results.count = data.length
 
+        if (data.length > 0) {
           // Map result into Model entity (actual instance of Model class)
-          const keys = Object.keys(res.data[0]);
-          for (let data of res.data) {
+          const keys = Object.keys(data[0]);
+          for (let d of data) {
 
             // @ts-ignore
-            const record = new this.entity(data);
+            const record = new this.entity(d);
 
             if (single) {
               // Single non-array from .find or custom params
@@ -180,12 +166,13 @@ export class QueryBuilder<E> {
         // If .store() save to store state
         if (this._state) this._state.set(results);
 
-      }, 0);
+
     }).catch((error) => {
       results.error = error
-      results.loading = false
       console.error(error);
-    });
+    }).finally(() =>
+      results.loading = false
+    )
 
     // Return empty Ref immediately, ref will update with api results are returned
     return results;
@@ -196,11 +183,11 @@ export class QueryBuilder<E> {
    * @param params optional params passed in by user on .get() for manual URL query
    * @returns URL string
    */
-     private buildUrlQuery(params?: string): string {
+    private buildUrlQuery(params?: string): string {
       let url: string = ''
 
       // If we passed in custom params from .query(params) use those instead.
-      if (params) return this.entityConfig.path + this._extraPath + params;
+      if (params) return this.config.path + this._extraPath + params;
 
       // Includes
       if (this._includes) {
@@ -216,7 +203,7 @@ export class QueryBuilder<E> {
       url = url.replace(url.charAt(0), '?');
 
       // Prefix with proper paths
-      url = this.entityConfig.path + this._extraPath + url;
+      url = this.config.path + this._extraPath + url;
 
       // Return url
       return url;

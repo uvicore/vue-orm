@@ -6,7 +6,7 @@ import { Results } from './results';
 /**
  * Model configuration interface
  */
- export interface ModelConfig {
+export interface ModelConfig {
   name: string,
   connection: string,
   path: string,
@@ -17,7 +17,8 @@ import { Results } from './results';
  * Uvicore ORM style API client Model base class
  * @returns Model
  */
- export abstract class Model {
+export abstract class Model {
+  _config!: ModelConfig
 
   public static get_schema(connectionKey: string, modelname: string): UnwrapRef<Results<Record<string, any>>> {
     return useOpenApiStore().schema(connectionKey, modelname);
