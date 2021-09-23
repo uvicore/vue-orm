@@ -31,7 +31,7 @@ export class QueryBuilder<E extends Model> {
    * Instantiate class
    * @param entity actual model class (non instance)
    */
-  public constructor(entity: E) {
+  public constructor(entity: E | any) {
     // Entity is our actual Model class that inherits base Model and calls this .query()
     this.entity = entity;
     this.config = entity._config;
