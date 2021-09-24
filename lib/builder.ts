@@ -6,9 +6,9 @@ import { useOpenApiStore } from './store';
 
 type Operator = 'in' | '!in' | 'like' | '!link' | '=' | '>' | '>=' | '<' | '<=' | 'null' | '!null'
 
-type Whereable<Field extends string = string> = Record<Field, [ string, Operator ]> | undefined
+type Whereable = Record<string, [ string, Operator ]> | undefined
 
-type Orderable<Field extends string = string> = Record<Field, 'ASC' | 'DESC'> | undefined
+type Orderable = { field: string, order?: 'ASC' | 'DESC' }
 /**
  * Uvicore ORM style API client query builder
  * Similar look and feel (but not exact) to Uvicore's backend python orm.
@@ -30,7 +30,7 @@ export class QueryBuilder<E extends Model> {
   private _state: any | null = null
   private _includes: string[] | null = null
   private _where: Whereable
-  private _orderBy: Orderable
+  private _orderBy: Record<string, 'ASC' | 'DESC'> | undefined
   private _ref: UnwrapRef<Results<E>> | null = null
 
   /**
@@ -85,8 +85,22 @@ export class QueryBuilder<E extends Model> {
     return this;
   }
 
-  public orderBy(orderBy: Orderable): this {
-    this._orderBy = orderBy
+  public orderBy(orderable: Orderable | Orderable[]): this {
+    if (typeof this._orderBy === 'undefined') {
+      this._orderBy = {}
+    }
+
+    if (orderable instanceof Array) {
+      orderable.forEach(o => {
+        console.log(o)
+        const { field, order } = o
+        this._orderBy![field] = order || 'ASC'
+      })
+    } else {
+      this._orderBy[orderable.field] = orderable.order || 'ASC'
+      console.log(this._orderBy)
+
+    }
     return this
   }
 
@@ -230,12 +244,17 @@ export class QueryBuilder<E extends Model> {
         url += '&where=' + JSON.stringify(this._where)
       }
 
+      if (this._orderBy) {
+        console.log('order by', this._orderBy)
+        url += '&order_by=' + JSON.stringify(this._orderBy)
+      }
+
       // Set first char to ?
       url = url.replace(url.charAt(0), '?');
 
       // Prefix with proper paths
       url = this.config.path + this._extraPath + url;
-
+      console.log(url)
       // Return url
       return url;
     }
