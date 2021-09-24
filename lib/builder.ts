@@ -4,6 +4,11 @@ import { Model, ModelConfig } from './model';
 import { Results } from './results';
 import { useOpenApiStore } from './store';
 
+type Operator = 'in' | '!in' | 'like' | '!link' | '=' | '>' | '>=' | '<' | '<=' | 'null' | '!null'
+
+type Whereable<Field extends string = string> = Record<Field, [ string, Operator ]> | undefined
+
+type Orderable<Field extends string = string> = Record<Field, 'ASC' | 'DESC'> | undefined
 /**
  * Uvicore ORM style API client query builder
  * Similar look and feel (but not exact) to Uvicore's backend python orm.
@@ -24,7 +29,8 @@ export class QueryBuilder<E extends Model> {
   private _extraPath: string = ''
   private _state: any | null = null
   private _includes: string[] | null = null
-  private _where: any | null = null
+  private _where: Whereable
+  private _orderBy: Orderable
   private _ref: UnwrapRef<Results<E>> | null = null
 
   /**
@@ -79,6 +85,11 @@ export class QueryBuilder<E extends Model> {
     return this;
   }
 
+  public orderBy(orderBy: Orderable): this {
+    this._orderBy = orderBy
+    return this
+  }
+
   /**
    * Where AND query.  Chain multiple .where() for ANDs
    * @param field Model field
@@ -86,9 +97,33 @@ export class QueryBuilder<E extends Model> {
    * @param value field value to where
    * @returns QueryBuilder
    */
-  public where(field: string, operator: string, value: any): this {
-    if (!this._where) this._where = {}
-    this._where[field] = [operator, value]
+
+
+  public where(where: {
+    fieldname: string,
+    operator?: Operator,
+    value: any
+  } | {
+    fieldname: string,
+    operator?: Operator,
+    value: any
+  }[]): this {
+    if (typeof this._where === 'undefined') {
+      this._where = {}
+    }
+
+    // const where = { field, value, operator}
+    console.log(where)
+    if (where instanceof Array) {
+      where.forEach(wh => {
+        const {fieldname, operator, value } = wh
+        this._where![fieldname] = [ operator || '=', value ]
+      })
+    } else {
+      const {fieldname, operator, value } = where
+      this._where[fieldname] = [ operator || '=', value ]
+    }
+
     return this;
   }
 
@@ -101,19 +136,23 @@ export class QueryBuilder<E extends Model> {
    * @param value Field value
    * @returns Vue reactive reference of model Results class
    */
-  public find(field?: string, value?: string|number): UnwrapRef<Results<E>> {
-    if (field && value) {
+  public find(fieldname: string, value?: string | number): UnwrapRef<Results<E>> | void {
+
+    // console.log('QUERY.FIND',{fieldname, operator: '=', value})
+
+    if (fieldname && value) {
       // Add a where for this custom field and value
-      this.where(field, '=', value)
-    } else if (field) {
-      // Just field, which means its the PK value, so use rest /pk URL instead of a where
-      value = field
-      field = undefined
-      this._extraPath  = '/' + field
+      // console.log('QUERY.FIND', {fieldname, operator: '=', value})
+      this.where({ fieldname, operator: '=', value })
+      return this.get(`/${fieldname}`, true)
+    } else if (fieldname) {
+      return this.get(`/${fieldname}`, true)
     }
 
-    // Use the main .get() with single=true
-    return this.get(undefined, true);
+
+    // const getter = this.get(undefined, true);
+    // console.log(getter)
+    // return getter
   }
 
   /**
@@ -128,52 +167,44 @@ export class QueryBuilder<E extends Model> {
   public get(params?: string, single: boolean = false): UnwrapRef<Results<E>> {
     // Could be passing in an existing ref for us to modify, it nof, use a new ref
     const results = this._ref || reactive<Results<E>>(new Results())
-
     // If passing a ref, ensure it is empty before query runs or .push to append
     if (this._ref) results.reset();
-
     // Build URL parameters from query builder
     const builderPath = this.buildUrlQuery(params);
-
     // Query Uvicore API
     this.api.get(builderPath).then(({ data }) => {
         // If custom params on .get() or comming from .find() we could be returning
         // a single non-array value.  Convert it to array for consistent handling.
         if (!Array.isArray(data)) {
-          data = Array.from(data)
+          data = [data]
         }
-
         //results.value.count = data.length
         results.count = data.length
-
+        results.loading = false
         if (data.length > 0) {
           // Map result into Model entity (actual instance of Model class)
           const keys = Object.keys(data[0]);
           for (let d of data) {
-
+            // console.log(keys)
             // @ts-ignore
             const record = new this.entity(d);
 
             if (single) {
               // Single non-array from .find or custom params
+
               results.result = record
             } else {
               results.results.push(record)
             }
           }
         }
-
-        // If .store() save to store state
-        if (this._state) this._state.set(results);
-
-
-    }).catch((error) => {
-      results.error = error
-      console.error(error);
-    }).finally(() =>
-      results.loading = false
-    )
-
+      // If .store() save to store state
+      if ( this._state ) {
+        this._state.set(results);
+      }
+    })
+    .catch((error) => results.error = error)
+    .finally(() => results.loading = false)
     // Return empty Ref immediately, ref will update with api results are returned
     return results;
   }
