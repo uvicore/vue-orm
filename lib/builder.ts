@@ -90,13 +90,12 @@ export class QueryBuilder<E extends Model> {
   }
 
 
-  public find(field: Field<E>, value?: any): UnwrapRef<Results<E>> | void {
+  public find(field: string, value?: any): UnwrapRef<Results<E>> {
     if (field && value) {
       this.where(field, '=', value)
-      return this.get(`/${field}`, true)
-    } else if (field) {
-      return this.get(`/${field}`, true)
     }
+    return this.get(`/${field}`, true)
+
   }
 
   public get(params?: string, single: boolean = false): UnwrapRef<Results<E>> {
@@ -136,7 +135,9 @@ export class QueryBuilder<E extends Model> {
     let url: string = ''
 
     // If we passed in custom params from .query(params) use those instead.
-    if (params) return this.config.path + this._extraPath + params;
+    if (params) {
+      url += this.config.path + this._extraPath + params;
+    }
 
     // Includes
     if (this._includes) {
@@ -149,7 +150,6 @@ export class QueryBuilder<E extends Model> {
     }
 
     if (this._orderBy) {
-      console.log('order by', this._orderBy)
       url += '&order_by=' + JSON.stringify(this._orderBy)
     }
 
