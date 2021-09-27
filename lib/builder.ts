@@ -65,8 +65,9 @@ export class QueryBuilder<E extends Model> {
     return this
   }
 
-  public where(where: Where<E>[], _: undefined, __: undefined): this
-  public where(where: Field, operator: Operator, value: any): this
+  public where(field: Field, operator: Operator, value: any): this
+  public where(field: Field, value: any, operator?: Operator): this
+  public where(where: Where<E>[], o: undefined, v: undefined): this
   public where(where: Where<E>[] | Field, operator: Operator | undefined, value: any | undefined): this {
     if (this._where === null) {
       this._where = Object.create({})
