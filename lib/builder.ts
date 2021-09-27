@@ -9,13 +9,7 @@ type Field<E extends Model = any> = keyof E
 
 type Operator = 'in' | '!in' | 'like' | '!link' | '=' | '>' | '>=' | '<' | '<=' | 'null' | '!='
 
-
-
-interface Where<E extends Model> {
-  field: Field<E>,
-  operator: Operator,
-  value: any
-}
+type Where<E extends Model> = [ Field<E>, Operator | any, any | undefined]
 
 
 export class QueryBuilder<E extends Model> {
@@ -76,20 +70,23 @@ export class QueryBuilder<E extends Model> {
     return this
   }
 
-  public where(where: Where<E>[]): this
-  public where(where: Where<E>): this
-  public where(where: Where<E> | Where<E>[])
-  : this {
-
+  public where(where: Where<E>[], _: undefined, __: undefined): this
+  public where(where: Field, operator: Operator, value: any): this
+  public where(where: Where<E>[] | Field, operator: Operator | undefined, value: any | undefined): this {
 
     if (where instanceof Array) {
-      where.forEach(wh => {
-        const { field, operator, value } = wh
-        Object.assign(this._where, { [field as keyof E]: [ operator || "=", value ] })
+      console.log("WHERE AS ARRAY", Object.values(where))
+      Object.values(where).forEach(w => {
+        const field = w[0] as keyof E
+        const operator: Operator = typeof w[2] === 'undefined' ? '=' : w[1]
+        const value = typeof w[2] === 'undefined' ? w[1] : w[2]
+        Object.assign(this._where,{ [field ]: [ operator || '=', value ] })
       })
     } else {
-      const { field, operator, value } = where
-      Object.assign(this._where,{ [field as keyof E]: [ operator || '=', value ] })
+      const o = typeof value === 'undefined' ? '=' : operator
+      const v = typeof value === 'undefined' ? operator : value
+
+      Object.assign(this._where,{ [ where ]: [ o, v ] })
     }
 
     console.log(this._where)
@@ -99,7 +96,7 @@ export class QueryBuilder<E extends Model> {
 
   public find(field: Field<E>, value?: any): UnwrapRef<Results<E>> | void {
     if (field && value) {
-      this.where({ field, operator: '=', value })
+      this.where(field, '=', value)
       return this.get(`/${field}`, true)
     } else if (field) {
       return this.get(`/${field}`, true)
