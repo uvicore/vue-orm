@@ -11,7 +11,6 @@ type Operator = 'in' | '!in' | 'like' | '!link' | '=' | '>' | '>=' | '<' | '<=' 
 
 type Where<E extends Model> = [ Field<E>, Operator | any, any | undefined]
 
-
 export class QueryBuilder<E extends Model> {
   private entity: E
   private config: ModelConfig
@@ -21,9 +20,9 @@ export class QueryBuilder<E extends Model> {
   private _extraPath: string = ''
   private _state: any | null = null
 
-  private _includes: Field[] = []
-  private _where: Record<Field, [ Operator, any ]> = {}
-  private _orderBy: Record<Field, 'ASC' | 'DESC'> = {}
+  private _includes: Field[] | null = null
+  private _where: Record<Field, [ Operator, any ]> | null = null
+  private _orderBy: Record<Field, 'ASC' | 'DESC'> | null = null
   private _ref: UnwrapRef<Results<E>> | null = null
 
 
@@ -46,36 +45,33 @@ export class QueryBuilder<E extends Model> {
     return this;
   }
 
-  public include(includes: string[]): this {
-    this._includes = includes
+  public include(includes: Field | Field[]): this {
+    if (includes instanceof Array) {
+      this._includes = [];
+      includes.forEach(field => this._includes!.push(field))
+    } else {
+      this._includes = [includes]
+    }
     return this;
   }
 
-  public orderBy(orderable: any | any[]): this {
+  public orderBy(field: Field, order: 'ASC' | 'DESC' = 'ASC'): this {
     if (typeof this._orderBy === 'undefined') {
-      this._orderBy = {}
-    }
-
-    if (orderable instanceof Array) {
-      orderable.forEach(o => {
-        console.log(o)
-        const { field, order } = o
-        this._orderBy![field] = order || 'ASC'
-      })
+      this._orderBy = Object.create({ [field]: order })
     } else {
-      this._orderBy[orderable.field] = orderable.order || 'ASC'
-      console.log(this._orderBy)
-
+      Object.assign(this._orderBy, { [field]: order} )
     }
+
     return this
   }
 
   public where(where: Where<E>[], _: undefined, __: undefined): this
   public where(where: Field, operator: Operator, value: any): this
   public where(where: Where<E>[] | Field, operator: Operator | undefined, value: any | undefined): this {
-
+    if (this._where === null) {
+      this._where = Object.create({})
+    }
     if (where instanceof Array) {
-      console.log("WHERE AS ARRAY", Object.values(where))
       Object.values(where).forEach(w => {
         const field = w[0] as keyof E
         const operator: Operator = typeof w[2] === 'undefined' ? '=' : w[1]
@@ -89,7 +85,6 @@ export class QueryBuilder<E extends Model> {
       Object.assign(this._where,{ [ where ]: [ o, v ] })
     }
 
-    console.log(this._where)
     return this;
   }
 
