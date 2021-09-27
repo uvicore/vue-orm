@@ -4,88 +4,60 @@ import { Model, ModelConfig } from './model';
 import { Results } from './results';
 import { useOpenApiStore } from './store';
 
-type Operator = 'in' | '!in' | 'like' | '!link' | '=' | '>' | '>=' | '<' | '<=' | 'null' | '!null'
 
-type Whereable = Record<string, [ string, Operator ]> | undefined
+type Field<E extends Model = any> = keyof E
 
-type Orderable = { field: string, order?: 'ASC' | 'DESC' }
-/**
- * Uvicore ORM style API client query builder
- * Similar look and feel (but not exact) to Uvicore's backend python orm.
- * Uvicore provides an "autoapi" with compled queryability.  This API client
- * helps you query Uvicore style APIs with chainable elegance and precision!
- */
+type Operator = 'in' | '!in' | 'like' | '!link' | '=' | '>' | '>=' | '<' | '<=' | 'null' | '!='
+
+
+
+interface Where<E extends Model> {
+  field: Field<E>,
+  operator: Operator,
+  value: any
+}
+
+
 export class QueryBuilder<E extends Model> {
-  // Actual model class (not instance) that will be instantiated for each axios result
   private entity: E
-
-  // Models config, holds API connection string, url path and more
   private config: ModelConfig
-
-  // Axios instance based on models URL and path
   private api: AxiosInstance
 
   // Query builder properties
   private _extraPath: string = ''
   private _state: any | null = null
-  private _includes: string[] | null = null
-  private _where: Whereable
-  private _orderBy: Record<string, 'ASC' | 'DESC'> | undefined
+
+  private _includes: Field[] = []
+  private _where: Record<Field, [ Operator, any ]> = {}
+  private _orderBy: Record<Field, 'ASC' | 'DESC'> = {}
   private _ref: UnwrapRef<Results<E>> | null = null
 
-  /**
-   * Instantiate class
-   * @param entity actual model class (non instance)
-   */
+
   public constructor(entity: E | any) {
-    // Entity is our actual Model class that inherits base Model and calls this .query()
     this.entity = entity;
     this.config = entity._config;
 
     this.api = axios.create({
-      // Base API url is from this models connection string name
       baseURL: useOpenApiStore().apis[this.config.connection].url,
     });
   }
 
-  /**
-   * Return results into a store.  Requires store have a .set() action like so:
-    set(state: UnwrapRef<Results<Space>>) {
-      this.loading = state.loading
-      this.error = state.error
-      this.result = state.result
-      this.results = state.results
-    },
-   * @param store
-   * @returns QueryBuilder
-   */
   public state(store: any) {
     this._state = store
     return this
   }
 
-  /**
-   * Return result into an existing vue reactive ref.  Useful if your compoment
-   * needs to pre declare a ref and the query should return results back to it
-   * @param ref Existing vue reactive ref
-   * @returns QueryBuilder
-   */
   public ref(ref: UnwrapRef<Results<E>>): this {
     this._ref = ref
     return this;
   }
 
-  /**
-   * Include deeply nested children relation records through array of dotnotation strings
-   * @param includes array of include strings
-   * @returns QueryBuilder
-   */
   public include(includes: string[]): this {
     this._includes = includes
     return this;
   }
 
-  public orderBy(orderable: Orderable | Orderable[]): this {
+  public orderBy(orderable: any | any[]): this {
     if (typeof this._orderBy === 'undefined') {
       this._orderBy = {}
     }
@@ -104,112 +76,56 @@ export class QueryBuilder<E extends Model> {
     return this
   }
 
-  /**
-   * Where AND query.  Chain multiple .where() for ANDs
-   * @param field Model field
-   * @param operator operator =, !=, >, <, >=, <=
-   * @param value field value to where
-   * @returns QueryBuilder
-   */
+  public where(where: Where<E>[]): this
+  public where(where: Where<E>): this
+  public where(where: Where<E> | Where<E>[])
+  : this {
 
 
-  public where(where: {
-    fieldname: string,
-    operator?: Operator,
-    value: any
-  } | {
-    fieldname: string,
-    operator?: Operator,
-    value: any
-  }[]): this {
-    if (typeof this._where === 'undefined') {
-      this._where = {}
-    }
-
-    // const where = { field, value, operator}
-    console.log(where)
     if (where instanceof Array) {
       where.forEach(wh => {
-        const {fieldname, operator, value } = wh
-        this._where![fieldname] = [ operator || '=', value ]
+        const { field, operator, value } = wh
+        Object.assign(this._where, { [field as keyof E]: [ operator || "=", value ] })
       })
     } else {
-      const {fieldname, operator, value } = where
-      this._where[fieldname] = [ operator || '=', value ]
+      const { field, operator, value } = where
+      Object.assign(this._where,{ [field as keyof E]: [ operator || '=', value ] })
     }
 
+    console.log(this._where)
     return this;
   }
 
-  /**
-   * Execute query of a SINGLE result (non-array), stored in Result.result (singular).
-   * If passing one param .find(1) field is automatically set to PK and url is /pk.
-   * If passing two params .find('name', 'matthew') we convert into a where on name=matthew.
-   * If passing NO params, use the query builder wheres and assume a SINGLE TOP 1 result.
-   * @param field Model field to find one of
-   * @param value Field value
-   * @returns Vue reactive reference of model Results class
-   */
-  public find(fieldname: string, value?: string | number): UnwrapRef<Results<E>> | void {
 
-    // console.log('QUERY.FIND',{fieldname, operator: '=', value})
-
-    if (fieldname && value) {
-      // Add a where for this custom field and value
-      // console.log('QUERY.FIND', {fieldname, operator: '=', value})
-      this.where({ fieldname, operator: '=', value })
-      return this.get(`/${fieldname}`, true)
-    } else if (fieldname) {
-      return this.get(`/${fieldname}`, true)
+  public find(field: Field<E>, value?: any): UnwrapRef<Results<E>> | void {
+    if (field && value) {
+      this.where({ field, operator: '=', value })
+      return this.get(`/${field}`, true)
+    } else if (field) {
+      return this.get(`/${field}`, true)
     }
-
-
-    // const getter = this.get(undefined, true);
-    // console.log(getter)
-    // return getter
   }
 
-  /**
-   * Execute query of multiple results (array), stored in Result.results (plural)
-   * If you have a custom endpoint that does not follow Uvicore autoapi standards then you can
-   * skip the query builder chains and put your URL directly in this .get('/1?include=xyz') method.
-   * If params, all query builder items passed in are IGNORED completely.
-   * @param params Custom user defined params to bypass querybuilder with direct URL access
-   * @param single If true, results should be a single Model instance, not an array of Model instances
-   * @returns Vue reactive reference of model Results class
-   */
   public get(params?: string, single: boolean = false): UnwrapRef<Results<E>> {
-    // Could be passing in an existing ref for us to modify, it nof, use a new ref
     const results = this._ref || reactive<Results<E>>(new Results())
-    // If passing a ref, ensure it is empty before query runs or .push to append
-    if (this._ref) results.reset();
-    // Build URL parameters from query builder
+    if (this._ref) {
+      results.reset();
+    }
+
     const builderPath = this.buildUrlQuery(params);
-    // Query Uvicore API
+
     this.api.get(builderPath).then(({ data }) => {
-        // If custom params on .get() or comming from .find() we could be returning
-        // a single non-array value.  Convert it to array for consistent handling.
         if (!Array.isArray(data)) {
           data = [data]
         }
-        //results.value.count = data.length
         results.count = data.length
         results.loading = false
         if (data.length > 0) {
-          // Map result into Model entity (actual instance of Model class)
-          const keys = Object.keys(data[0]);
           for (let d of data) {
-            // console.log(keys)
             // @ts-ignore
             const record = new this.entity(d);
+            single ? results.result = record : results.results.push(record)
 
-            if (single) {
-              // Single non-array from .find or custom params
-
-              results.result = record
-            } else {
-              results.results.push(record)
-            }
           }
         }
       // If .store() save to store state
@@ -223,41 +139,36 @@ export class QueryBuilder<E extends Model> {
     return results;
   }
 
-  /**
-   * Convert class query builder into Uvicore compatible URL
-   * @param params optional params passed in by user on .get() for manual URL query
-   * @returns URL string
-   */
-    private buildUrlQuery(params?: string): string {
-      let url: string = ''
+  private buildUrlQuery(params?: string): string {
+    let url: string = ''
 
-      // If we passed in custom params from .query(params) use those instead.
-      if (params) return this.config.path + this._extraPath + params;
+    // If we passed in custom params from .query(params) use those instead.
+    if (params) return this.config.path + this._extraPath + params;
 
-      // Includes
-      if (this._includes) {
-        url += '&include=' + this._includes.join(',')
-      }
-
-      // Wheres AND
-      if (this._where) {
-        url += '&where=' + JSON.stringify(this._where)
-      }
-
-      if (this._orderBy) {
-        console.log('order by', this._orderBy)
-        url += '&order_by=' + JSON.stringify(this._orderBy)
-      }
-
-      // Set first char to ?
-      url = url.replace(url.charAt(0), '?');
-
-      // Prefix with proper paths
-      url = this.config.path + this._extraPath + url;
-      console.log(url)
-      // Return url
-      return url;
+    // Includes
+    if (this._includes) {
+      url += '&include=' + this._includes.join(',')
     }
+
+    // Wheres AND
+    if (this._where) {
+      url += '&where=' + JSON.stringify(this._where)
+    }
+
+    if (this._orderBy) {
+      console.log('order by', this._orderBy)
+      url += '&order_by=' + JSON.stringify(this._orderBy)
+    }
+
+    // Set first char to ?
+    url = url.replace(url.charAt(0), '?');
+
+    // Prefix with proper paths
+    url = this.config.path + this._extraPath + url;
+    console.log(url)
+    // Return url
+    return url;
+  }
 
 }
 
