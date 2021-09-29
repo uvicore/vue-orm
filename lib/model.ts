@@ -18,8 +18,6 @@ export interface ModelConfig {
  * @returns Model
  */
 export abstract class Model {
-  _config!: ModelConfig
-
   public static get_schema(connectionKey: string, modelname: string): UnwrapRef<Results<any>> {
     return useOpenApiStore().schema(connectionKey, modelname);
   }

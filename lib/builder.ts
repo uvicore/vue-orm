@@ -19,12 +19,13 @@ export class QueryBuilder<E extends Model> {
   // Query builder properties
   private _extraPath: string = ''
   private _state: any | null = null
-
   private _includes: Field[] | null = null
-  private _where: Record<Field, [ Operator, any ]> | null = null
   private _orderBy: Record<Field, 'ASC' | 'DESC'> | null = null
   private _ref: UnwrapRef<Results<E>> | null = null
-
+  private _filter: Record<Field, [ Operator, any ]> | null = null
+  private _where: [ Field, Operator, any ][] | null = null
+  private _orWhere: [ Field, Operator, any ][] | null = null
+  private _orFilter: [ Field, Operator, any][] | null = null
 
   public constructor(entity: E | any) {
     this.entity = entity;
@@ -65,34 +66,94 @@ export class QueryBuilder<E extends Model> {
     return this
   }
 
-  public where(field: Field, operator: Operator, value: any): this
-  public where(field: Field, value: any, operator?: Operator): this
-  public where(where: Where<E>[], o: undefined, v: undefined): this
-  public where(where: Where<E>[] | Field, operator: Operator | undefined, value: any | undefined): this {
-    if (this._where === null) {
-      this._where = Object.create({})
+  public filter(field: Field, operator: Operator, value: any): this
+  public filter(field: Field, value: any, operator?: Operator): this
+  public filter(filter: Where<E>[], o: undefined, v: undefined): this
+  public filter(filter: Where<E>[] | Field, operator: Operator | undefined, value: any | undefined): this {
+    if (this._filter === null) {
+      this._filter = Object.create({})
     }
-    if (where instanceof Array) {
-      Object.values(where).forEach(w => {
+    if (filter instanceof Array) {
+      Object.values(filter).forEach(w => {
         const field = w[0] as keyof E
         const operator: Operator = typeof w[2] === 'undefined' ? '=' : w[1]
         const value = typeof w[2] === 'undefined' ? w[1] : w[2]
-        Object.assign(this._where,{ [field ]: [ operator || '=', value ] })
+        Object.assign(this._filter, { [field ]: [ operator || '=', value ] })
       })
     } else {
       const o = typeof value === 'undefined' ? '=' : operator
       const v = typeof value === 'undefined' ? operator : value
 
-      Object.assign(this._where,{ [ where ]: [ o, v ] })
+      Object.assign(this._filter,{ [ filter ]: [ o, v ] })
     }
 
     return this;
   }
 
 
+  public orFilter(filters: Where<E>[]): this {
+    if (this._orFilter === null) {
+      this._orFilter = []
+    }
+    Object.values(filters).forEach(w => {
+      const field = w[0] as string
+      const operator: Operator = typeof w[2] === 'undefined' ? '=' : w[1]
+      const value = typeof w[2] === 'undefined' ? w[1] : w[2]
+
+      this._orFilter!.push([field, operator, value ])
+    })
+
+    return this;
+  }
+
+  public where(field: Field, operator: Operator, value: any): this
+  public where(field: Field, value: any, operator?: Operator): this
+  public where(where: Where<E>[], o: undefined, v: undefined): this
+  public where(where: Where<E>[] | Field, operator: Operator | undefined, value: any | undefined): this {
+    if (this._where === null) {
+      this._where = []
+    }
+    if (where instanceof Array) {
+      where.forEach(w => {
+        const field = w[0] as keyof E
+        const operator: Operator = typeof w[2] === 'undefined' ? '=' : w[1]
+        const value = typeof w[2] === 'undefined' ? w[1] : w[2]
+        this._where!.push([ field , operator, value ])
+      })
+    } else {
+      const o = typeof value === 'undefined' ? '=' : operator
+      const v = typeof value === 'undefined' ? operator : value
+
+      this._where.push([ where, o!, v ])
+    }
+
+    return this;
+  }
+
+
+
+
+  public orWhere(wheres: Where<E>[]): this {
+    if (this._orWhere === null) {
+      this._orWhere = []
+    }
+
+    Object.values(wheres).forEach(w => {
+      const field = w[0] as string
+      const operator: Operator = typeof w[2] === 'undefined' ? '=' : w[1]
+      const value = typeof w[2] === 'undefined' ? w[1] : w[2]
+
+      this._orWhere!.push([field, operator, value ])
+
+    })
+
+    return this;
+  }
+
   public find(field: string, value?: any): UnwrapRef<Results<E>> {
     if (field && value) {
       this.where(field, '=', value)
+      return this.get(`/`, true)
     }
     return this.get(`/${field}`, true)
 
@@ -136,31 +197,47 @@ export class QueryBuilder<E extends Model> {
 
     // If we passed in custom params from .query(params) use those instead.
     if (params) {
+      // Includes
       url += this.config.path + this._extraPath + params;
+
+      if (this._includes) {
+        url += '&include=' + this._includes.join(',')
+      }
+
+      // Wheres AND
+      if (this._where) {
+        console.log(this._where)
+        url += '&where=' + JSON.stringify(this._where)
+      }
+
+      // Set first char to ?
+      url = url.replace(url.charAt(this.config.path.length + this._extraPath.length + params.length), '?');
+
+      return url
+    } else {
+
+      // Includes
+      if (this._includes) {
+        url += '&include=' + this._includes.join(',')
+      }
+
+      // Wheres AND
+      if (this._where) {
+        url += '&where=' + JSON.stringify(this._where)
+      }
+      if (this._orderBy) {
+        url += '&order_by=' + JSON.stringify(this._orderBy)
+      }
+
+      // Set first char to ?
+      url = url.replace(url.charAt(0), '?');
+
+      // Prefix with proper paths
+      url = this.config.path + this._extraPath + url;
+
+      return url;
     }
 
-    // Includes
-    if (this._includes) {
-      url += '&include=' + this._includes.join(',')
-    }
-
-    // Wheres AND
-    if (this._where) {
-      url += '&where=' + JSON.stringify(this._where)
-    }
-
-    if (this._orderBy) {
-      url += '&order_by=' + JSON.stringify(this._orderBy)
-    }
-
-    // Set first char to ?
-    url = url.replace(url.charAt(0), '?');
-
-    // Prefix with proper paths
-    url = this.config.path + this._extraPath + url;
-    console.log(url)
-    // Return url
-    return url;
   }
 
 }
