@@ -1,105 +1,67 @@
-import { useOpenApiStore } from "./store"
-import { UnwrapRef } from 'vue';
-import { Results } from './results';
+import { UnwrapRef } from "vue"
+import { Results } from "./results"
+import { QueryBuilder } from "./builder"
 
 
-/**
- * Model configuration interface
- */
 export interface ModelConfig {
-  name: string,
-  connection: string,
-  path: string,
+  connection: string
+  modelName: string
+  url: string
+}
+
+export class ModelRef {
+
+  static results: UnwrapRef<Results<ModelRef>>
+
+  static config: ModelConfig
+
+  static query(): QueryBuilder<ModelRef> {
+    return new QueryBuilder<ModelRef>(ModelRef)
+  }
 }
 
 
-/**
- * Uvicore ORM style API client Model base class
- * @returns Model
- */
-export abstract class Model {
-  public static get_schema(connectionKey: string, modelname: string): UnwrapRef<Results<any>> {
-    return useOpenApiStore().schema(connectionKey, modelname);
-  }
+export function UvicoreModel(config: any) {
+  return function<
+    T extends { new (...args: any[]): any }
+  >(target: T) {
+    const query = () => new QueryBuilder(target);
 
-  public save() {
-    console.log('MODEL save() here', this)
-  }
+    (target as any).config = config;
+    (target as any).query = query;
+    target.prototype.config = config;
+    target.prototype.query = query
 
-  public delete() {
-    console.log('MODEL delete() here', this)
-  }
+    console.log({
+      len: target.length,
+      name: target.name,
+      proto: target.prototype
+    })
 
+
+
+    // const entity = new class extends target {}
+    // //   static query(): QueryBuilder<any> {
+    // //     console.log('STATIC DECORATOR QUERY METHOD', this)
+    // //     return new QueryBuilder(target)
+    // //   }
+    // // }
+
+    // console.log(entity)
+    // return entity
+    // Object.freeze(target)
+    // console.log(Object.isFrozen(target))
+
+    // return target
+    // new class extends target {
+
+    // //   static config = config
+    // }
+
+
+
+  }
 }
-
-
-
-
-
-// @ts-ignore
-// export function Model<E>() {
-
-//   abstract class Model {
-
-//     public static query(): QueryBuilder<E> {
-//       return new QueryBuilder<E>(this);
-//     }
-
-//     public static newRef(): UnwrapRef<Results<E>> {
-//       return reactive<Results<E>>(new Results());
-//     }
-
-//     public save(): string {
-//       console.log("MODEL SAVE() HERE");
-//       return "Save() here!"
-//     }
-//   }
-//   return Model;
-// }
-
-
-
-// export class Model2 {
-
-//   // @ts-ignore
-//   public static query(): QueryBuilder<E> {
-//     // @ts-ignore
-//     return new QueryBuilder<E>(this);
-//   }
-
-//   // @ts-ignore
-//   public static newRef(): UnwrapRef<Results<E>> {
-//     // @ts-ignore
-//     return reactive<Results<E>>(new Results());
-//   }
-
-//   public save(): string {
-//     console.log("MODEL SAVE() HERE");
-//     return "Save() here!"
-//   }
-// }
-
-
-
-// export class Model<E> {
-//   // @ts-ignore
-//   public static query(): QueryBuilder<E> {
-//     // @ts-ignore
-//     return new QueryBuilder<E>(this);
-//   }
-
-//   // @ts-ignore
-//   public static newRef(): UnwrapRef<Results<E>> {
-//     // @ts-ignore
-//     return reactive<Results<E>>(new Results());
-//   }
-
-//   public save(): string {
-//     console.log("MODEL SAVE() HERE");
-//     return "Save() here!"
-//   }
-// }
-
 
 
 
