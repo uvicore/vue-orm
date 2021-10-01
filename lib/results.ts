@@ -9,7 +9,7 @@ export class Results<E> {
   count = 0
 
   get data() {
-    return this.result || this.results
+    return this.result || this.results || null
   }
 
   reset() {

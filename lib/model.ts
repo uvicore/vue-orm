@@ -19,12 +19,21 @@ export class ModelRef {
   static props(): any[] {
     return []
   }
+
+  static save() {
+    console.log('SAVING MODEL RECORD', this)
+  }
+
+  static delete() {
+    console.log('DELETING MODEL RECORD', this)
+  }
 }
 
 
 export function UvicoreModel(config: ModelConfig) {
   return function<T extends { new (...args: any[]): any }>(target: T) {
-    const query = () => new QueryBuilder<typeof target>(target);
+
+    const query = () => new QueryBuilder<any>(target);
 
     const schema = () => {
       const apiStore = useApiStore();
@@ -42,19 +51,16 @@ export function UvicoreModel(config: ModelConfig) {
     target.prototype.props = props;
     Object.assign(target, { config, query, schema, props });
 
+    // console.log(target)
+    // return class extends target {
+    //   static query(): QueryBuilder<T> {
+    //     return new QueryBuilder<T>(ModelRef)
+    //   }
 
-
-  //   const className = config.modelName + 'Model'
-  //   return class extends target {
-  //     config = config
-  //     static query(): QueryBuilder {
-  //       return new QueryBuilder<any>(target);
-  //     }
-  //     static schema() {
-  //       const apiStore = useApiStore()
-  //       return apiStore.schema(config.connection, config.modelName)
-  //     }
-  //   }
+    //   constructor(...args: any[]) {
+    //     super()
+    //   }
+    // }
   }
 }
 
