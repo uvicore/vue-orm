@@ -1,6 +1,6 @@
-import { UnwrapRef } from "vue"
-import { Results } from "./results"
+
 import { QueryBuilder } from "./builder"
+import { useApiStore } from "./store"
 
 
 export interface ModelConfig {
@@ -10,58 +10,56 @@ export interface ModelConfig {
 }
 
 export class ModelRef {
-
-  static results: UnwrapRef<Results<ModelRef>>
-
-  static config: ModelConfig
-
   static query(): QueryBuilder<ModelRef> {
     return new QueryBuilder<ModelRef>(ModelRef)
   }
-}
-
-
-export function UvicoreModel(config: any) {
-  return function<
-    T extends { new (...args: any[]): any }
-  >(target: T) {
-    const query = () => new QueryBuilder(target);
-
-    (target as any).config = config;
-    (target as any).query = query;
-    target.prototype.config = config;
-    target.prototype.query = query
-
-    console.log({
-      len: target.length,
-      name: target.name,
-      proto: target.prototype
-    })
-
-
-
-    // const entity = new class extends target {}
-    // //   static query(): QueryBuilder<any> {
-    // //     console.log('STATIC DECORATOR QUERY METHOD', this)
-    // //     return new QueryBuilder(target)
-    // //   }
-    // // }
-
-    // console.log(entity)
-    // return entity
-    // Object.freeze(target)
-    // console.log(Object.isFrozen(target))
-
-    // return target
-    // new class extends target {
-
-    // //   static config = config
-    // }
-
-
-
+  static schema(): Record<string, any> {
+    return {}
+  }
+  static props(): any[] {
+    return []
   }
 }
+
+
+export function UvicoreModel(config: ModelConfig) {
+  return function<T extends { new (...args: any[]): any }>(target: T) {
+    const query = () => new QueryBuilder<typeof target>(target);
+
+    const schema = () => {
+      const apiStore = useApiStore();
+      return apiStore.schema(config.connection, config.modelName);
+    };
+
+    const props = () => {
+      const apiStore = useApiStore();
+      return apiStore.properties(config.connection, config.modelName);
+    };
+
+    target.prototype.config = config;
+    target.prototype.query = query;
+    target.prototype.schema = schema;
+    target.prototype.props = props;
+    Object.assign(target, { config, query, schema, props });
+
+
+
+  //   const className = config.modelName + 'Model'
+  //   return class extends target {
+  //     config = config
+  //     static query(): QueryBuilder {
+  //       return new QueryBuilder<any>(target);
+  //     }
+  //     static schema() {
+  //       const apiStore = useApiStore()
+  //       return apiStore.schema(config.connection, config.modelName)
+  //     }
+  //   }
+  }
+}
+
+
+
 
 
 
