@@ -14,45 +14,43 @@ export class QueryBuilder<E extends ModelRef> {
   constructor(entity: E) {
     this.entity = entity
     this.config = (entity as any).config
-    this.api = axios.create({
-      baseURL: useApiStore().apis[this.config.connection].url
-    })
+    this.api = axios.create({ baseURL: useApiStore().apis[this.config.connection].url })
     this.results = reactive<Results<E>>(new Results<E>())
   }
 
-  async find(id: string): Promise<void> {
-    try {
-      this.results.reset()
-      const apiCall = await this.api.get(`${this.config.url}/${id}`)
-      const result = await apiCall.data
-      // @ts-ignore
-      Object.assign(this.results.result, new this.entity(result) as E)
-    } catch (err) {
-      this.results.error = err
-    } finally {
-      this.results.loading = false
-    }
+  private _queryParams = {}
+  private _include = []
+  private _where = []
+  private _orWhere = []
+  private _filter = []
+  private _orFilter = []
+  private _orderBy = []
+  private _keyBy = []
 
+  find(id: string): UnwrapRef<Results<E>> {
+    this.results.reset()
+    this.api.get(`${this.config.url}/${id}`).then(
+      (response) => Object.assign(this.results.result, response.data)
+    ).catch(
+      (err) => this.results.error = err
+    ).finally(
+      () => this.results.loading = false
+    )
     console.log('FIND', this.results.result)
+    return this.results
   }
 
-  async get(): Promise<void> {
-    try {
-      this.results.reset()
-      const apiCall = await this.api.get(this.config.url)
-      for await (const result of apiCall.data) {
-        // @ts-ignore
-        this.results.results.push(new this.entity(result))
-      }
-    }
-    catch (err) {
-      this.results.error = err
-    }
-    finally {
-      this.results.loading = false
-    }
-
+  get(): UnwrapRef<Results<E>> {
+    this.results.reset()
+    this.api.get(this.config.url).then(
+      (response) => this.results.results.push(response.data)
+    ).catch(
+      (err) => this.results.error = err
+    ).finally(
+      () => this.results.loading = false
+    )
     console.log('GET', this.results.results)
+    return this.results
   }
 }
 

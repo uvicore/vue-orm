@@ -15,7 +15,7 @@ export class Results<E extends ModelRef> {
   reset() {
     this.loading = true,
     this.error = null
-    this.result = Object.create({})
+    this.result = {} as E
     this.results = []
   }
 }
