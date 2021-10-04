@@ -16,7 +16,7 @@ export class QueryBuilder<E extends ModelRef> {
   entity: E
   config: ModelConfig
   api: AxiosInstance
-  results: UnwrapRef<Results<E>>;
+  results: UnwrapRef<Results<E | any>>;
 
 
   private _state: any | undefined
@@ -41,22 +41,23 @@ export class QueryBuilder<E extends ModelRef> {
    * Instantiate class
    * @param entity actual model class (non instance)
    */
-  constructor(entity: E) {
+  constructor(entity: E | any) {
     this.entity = entity
     this.config = (entity as any).config
     this.api = axios.create({ baseURL: useApiStore().apis[this.config.connection].url })
     this.results = reactive<Results<E>>(new Results<E>())
   }
 
-  public sort(sortables: { field: string, order: 'ASC' | 'DESC' }[], o: undefined): this
-  public sort(field: string | { field: string, order: 'ASC' | 'DESC' | undefined }[], order: 'ASC' | 'DESC' | undefined = 'ASC'): this {
+  public sort(field: string, order: 'ASC' | 'DESC' | undefined): this
+  public sort(sortables: [ string, 'ASC' | 'DESC' | undefined ][], o: undefined): this
+  public sort(field: string | [ string, 'ASC' | 'DESC' | undefined ][], order: 'ASC' | 'DESC' | undefined = 'ASC'): this {
     if (typeof this._sort === 'undefined') {
       this._sort = []
     }
     if (typeof field === 'string') {
       this._sort.push([ field, order ])
     } else if (field instanceof Array) {
-      field.forEach(({field, order}) => this._sort!.push([field, order || 'ASC']))
+      field.forEach(([field, order]) => this._sort!.push([field, order || 'ASC']))
     }
     return this
   }
@@ -112,15 +113,16 @@ export class QueryBuilder<E extends ModelRef> {
     return this
   }
 
-  public orderBy(orderBys: { field: string, order: 'ASC' | 'DESC' }[], o: undefined): this
-  public orderBy(field: string | { field: string, order: 'ASC' | 'DESC' | undefined }[], order: 'ASC' | 'DESC' | undefined = 'ASC'): this {
+  public orderBy(field: string, order: 'ASC' | 'DESC' | undefined): this
+  public orderBy(orderBys: [ string, 'ASC' | 'DESC' | undefined ][], o: undefined): this
+  public orderBy(field: string | [ string, 'ASC' | 'DESC' | undefined ][], order: 'ASC' | 'DESC' | undefined): this {
     if (typeof this._orderBy === 'undefined') {
       this._orderBy = []
     }
     if (typeof field === 'string') {
-      this._orderBy.push([ field, order ])
+      this._orderBy.push([ field, order || 'ASC' ])
     } else if (field instanceof Array) {
-      field.forEach(({field, order}) => this._orderBy!.push([field, order || 'ASC']))
+      field.forEach(([f, o]) => this._orderBy!.push([f, o || 'ASC']))
     }
     return this
   }
@@ -218,7 +220,7 @@ export class QueryBuilder<E extends ModelRef> {
    * @param value Field value
    * @returns Vue reactive reference of model Results class
   */
-  public find(key: string, value?: any): UnwrapRef<Results<E>> {
+  public find<Model extends any = E>(key: string, value?: any): UnwrapRef<Results<Model>> {
     this.results.reset()
 
     let params = ''
@@ -245,7 +247,7 @@ export class QueryBuilder<E extends ModelRef> {
     if (this._state) {
       this._state.set(this.results)
     }
-    return this.results
+    return this.results as UnwrapRef<Results<Model>>
   }
 
 
@@ -258,7 +260,7 @@ export class QueryBuilder<E extends ModelRef> {
    * @param single If true, results should be a single Model instance, not an array of Model instances
    * @returns Vue reactive reference of model Results class
   */
-  public get(params?: string): UnwrapRef<Results<E>> {
+  public get<Model extends any = E>(params?: string): UnwrapRef<Results<Model>> {
     this.results.reset()
     this.api.get(this.buildQueryParams(params, false)).then(
       (response) => {
@@ -276,7 +278,7 @@ export class QueryBuilder<E extends ModelRef> {
     if (this._state) {
 
     }
-    return this.results
+    return this.results as UnwrapRef<Results<Model>>
   }
 
 

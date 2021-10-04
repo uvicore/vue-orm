@@ -1,7 +1,7 @@
+import { ModelRef } from "./model";
 
 
-
-export class Results<E> {
+export class Results<E extends ModelRef | any> {
   loading = true
   error: any | null = null
   result: E = {} as E
