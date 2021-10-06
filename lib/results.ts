@@ -1,7 +1,7 @@
 import { ModelRef } from "./model";
 
 
-export class Results<E extends ModelRef | any> {
+export class Results<E extends ModelRef = any> {
   loading: boolean
   error: any | null
   result: E

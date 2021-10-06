@@ -1,12 +1,8 @@
 
 import { QueryBuilder } from "./builder"
 import { useApiStore } from "./store"
+import { JustProps } from "./types"
 
-
-
-export type JustProps<T extends object> = {
-  [K in keyof T]: T[K] extends (...args: any[]) => any ? never : T[K];
-};
 
 export interface ModelConfig {
   connection: string
@@ -19,22 +15,23 @@ export class ModelRef {
   static query(): QueryBuilder<ModelRef> {
     return new QueryBuilder(ModelRef)
   }
-  static schema(): Record<string, any> {
-    return {}
-  }
-  static props(): any[] {
-    return []
-  }
+  // static schema(): Record<string, any> {
+  //   return {}
+  // }
+  // static props(): any[] {
+  //   return []
+  // }
 
-  static save() {
-    console.log('SAVING MODEL RECORD', this)
-  }
+  // static save() {
+  //   console.log('SAVING MODEL RECORD', this)
+  // }
 
-  static delete() {
-    console.log('DELETING MODEL RECORD', this)
-  }
+  // static delete() {
+  //   console.log('DELETING MODEL RECORD', this)
+  // }
 
   constructor(props: Partial<JustProps<ModelRef>> = {}) {
+    console.log(props)
     Object.assign(props, this)
   }
 

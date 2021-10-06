@@ -220,7 +220,7 @@ export class QueryBuilder<E extends ModelRef> {
    * @param value Field value
    * @returns Vue reactive reference of model Results class
   */
-  public find<Model extends any = E>(key: string, value?: any): UnwrapRef<Results<Model>> {
+  public find<M extends E = any>(key: string, value?: any): UnwrapRef<Results<M>> {
     this.results.reset()
 
     let params = ''
@@ -249,7 +249,7 @@ export class QueryBuilder<E extends ModelRef> {
     }
 
 
-    return this.results as UnwrapRef<Results<Model>>
+    return this.results
   }
 
 
@@ -262,7 +262,7 @@ export class QueryBuilder<E extends ModelRef> {
    * @param single If true, results should be a single Model instance, not an array of Model instances
    * @returns Vue reactive reference of model Results class
   */
-  public get<Model extends any = E>(params?: string): UnwrapRef<Results<Model>> {
+  public get<M extends E = any>(params?: string): UnwrapRef<Results<M>> {
     this.results.reset()
     this.api.get(this.buildQueryParams(params, false)).then(
       (response) => {
@@ -279,7 +279,7 @@ export class QueryBuilder<E extends ModelRef> {
     if (this._state) {
 
     }
-    return this.results as UnwrapRef<Results<Model>>
+    return this.results
   }
 
 
