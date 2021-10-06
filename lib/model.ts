@@ -15,23 +15,8 @@ export class ModelRef {
   static query(): QueryBuilder<ModelRef> {
     return new QueryBuilder(ModelRef)
   }
-  // static schema(): Record<string, any> {
-  //   return {}
-  // }
-  // static props(): any[] {
-  //   return []
-  // }
-
-  // static save() {
-  //   console.log('SAVING MODEL RECORD', this)
-  // }
-
-  // static delete() {
-  //   console.log('DELETING MODEL RECORD', this)
-  // }
 
   constructor(props: Partial<JustProps<ModelRef>> = {}) {
-    console.log(props)
     Object.assign(props, this)
   }
 
@@ -40,7 +25,6 @@ export class ModelRef {
 
 export function UvicoreModel<Model extends ModelRef>(config: ModelConfig) {
   return function<T extends { new (...args: any[]): Model }>(target: T) {
-    console.log(target)
     const query = () => new QueryBuilder<any>(target);
 
     const schema = () => {

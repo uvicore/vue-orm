@@ -16,7 +16,7 @@ export class QueryBuilder<E extends ModelRef> {
   entity: E
   config: ModelConfig
   api: AxiosInstance
-  results: UnwrapRef<Results<E | any>>;
+  results: UnwrapRef<Results<E>>;
 
 
   private _state: any | undefined
@@ -41,7 +41,7 @@ export class QueryBuilder<E extends ModelRef> {
    * Instantiate class
    * @param entity actual model class (non instance)
    */
-  constructor(entity: E | any) {
+  constructor(entity: E) {
     this.entity = entity
     this.config = (entity as any).config
     this.api = axios.create({ baseURL: useApiStore().apis[this.config.connection].url })
@@ -134,13 +134,15 @@ export class QueryBuilder<E extends ModelRef> {
    * @param value field value to where
    * @returns QueryBuilder
   */
-  public where(field: string, operator: Operator, value: any): this
-  public where(field: string, value: any, operator: undefined): this
-  public where(where: [ string, Operator | any, any | undefined][], o: undefined, v: undefined): this
-  public where(where: string | [ string, Operator | any, any | undefined][], operator: Operator | undefined, value: any | undefined): this {
+  public where(field: string, operator: Operator | undefined, value: any | undefined): this
+  public where(field: string, value: any | undefined, operator: undefined): this
+  public where(where: [ string, Operator | any | undefined, any | undefined][], o: undefined, v: undefined): this
+  public where(where: string | [ string, Operator | any, any | undefined][], operator: Operator | any | undefined, value: any | undefined): this {
     if (typeof this._where === 'undefined') {
       this._where = []
     }
+
+    // console.log(where, operator, value)
     if (typeof where === 'string') {
       this._where.push([ where, value ? operator : '=', value || operator ])
     } else if (where instanceof Array) {
@@ -220,14 +222,14 @@ export class QueryBuilder<E extends ModelRef> {
    * @param value Field value
    * @returns Vue reactive reference of model Results class
   */
-  public find<M extends E = any>(key: string, value?: any): UnwrapRef<Results<M>> {
+  public find<M extends E = any>(key: string | number, value?: any): UnwrapRef<Results<M>> {
     this.results.reset()
 
     let params = ''
 
     if (key && value) {
 
-      this.where(key, '=', value)
+      this.where(key.toString(), '=', value)
     } else {
       params = '/' + key
     }
@@ -249,7 +251,7 @@ export class QueryBuilder<E extends ModelRef> {
     }
 
 
-    return this.results
+    return this.results as UnwrapRef<Results<M>>
   }
 
 
@@ -279,7 +281,7 @@ export class QueryBuilder<E extends ModelRef> {
     if (this._state) {
 
     }
-    return this.results
+    return this.results as UnwrapRef<Results<M>>
   }
 
 
@@ -288,12 +290,13 @@ export class QueryBuilder<E extends ModelRef> {
    * @param params optional params passed in by user on .get() for manual URL query
    * @returns URL string
   */
-  private buildQueryParams(params?: string, single = false) {
+  private buildQueryParams(params?: string | Record<string, any>, single = false) {
     let url: string = ''
+    const queryParams = typeof params === 'string' ? params || '' : JSON.stringify(params);
 
     if (single) {
       // Includes
-      url += this.config.url + this._extraPath + params;
+      url += this.config.url + this._extraPath + queryParams
 
       if (this._includes) {
         url += '&include=' + this._includes.join(',')
@@ -317,7 +320,7 @@ export class QueryBuilder<E extends ModelRef> {
       }
 
       if(this._sort || this._filter || this._where || this._sort || this._orFilter || this._includes) {
-        url = url.replace(url.charAt(this.config.url.length + this._extraPath.length + (params!.length | 0)), '?');
+        url = url.replace(url.charAt(this.config.url.length + this._extraPath.length + queryParams.length), '?');
       }
       // Set first char to ?
 
