@@ -235,9 +235,9 @@ export class QueryBuilder<E extends ModelRef> {
 
       (response) => {
         //@ts-ignore
-        const record = new this.entity(response.data)
+        const record = new this.entity(response.data instanceof Array ? Object.assign(...response.data) : response.data)
+        console.log(record)
         Object.assign(this.results.result, record)
-        this.results.count = 1
       }).catch(
       (err) => this.results.error = err
     ).finally(
@@ -247,6 +247,8 @@ export class QueryBuilder<E extends ModelRef> {
     if (this._state) {
       this._state.set(this.results)
     }
+
+
     return this.results as UnwrapRef<Results<Model>>
   }
 
@@ -267,7 +269,6 @@ export class QueryBuilder<E extends ModelRef> {
         for (const data of response.data) {
           //@ts-ignore
           this.results.results.push(new this.entity(data))
-          this.results.count = response.data.length
         }
       }).catch(
       (err) => this.results.error = err

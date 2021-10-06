@@ -34,9 +34,9 @@ export class ModelRef {
     console.log('DELETING MODEL RECORD', this)
   }
 
-  // constructor(props: Partial<JustProps<ModelRef>> = {}) {
-  //   Object.assign(props, this)
-  // }
+  constructor(props: Partial<JustProps<ModelRef>> = {}) {
+    Object.assign(props, this)
+  }
 
 }
 
